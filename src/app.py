@@ -8,7 +8,7 @@ from flask_swagger import swagger
 from flask_cors import CORS
 from utils import APIException, generate_sitemap
 from admin import setup_admin
-from models import db, User
+from models import db, User, Characters, Planets
 #from models import Person
 
 app = Flask(__name__)
@@ -36,14 +36,154 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
-def handle_hello():
+@app.route('/users', methods=['GET'])
+def get_users():
+    all_users = User.query.all()
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+    all_users = list(map(lambda user:user.serialize(),all_users))
 
-    return jsonify(response_body), 200
+    return jsonify(all_users), 200
+
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    user = User.query.filter_by(id = user_id).first()
+    print(user)
+    return jsonify(user.serialize()), 200
+
+@app.route('/users', methods=['POST'])
+def post_user():
+    new_user = request.get_json()
+
+    new_user = User(username = new_user["username"],email = new_user["email"],password = new_user["password"],is_active = new_user["is_active"])
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    return jsonify(new_user.serialize()), 201
+
+@app.route('/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    name_user = User.query.filter_by(id = user_id).first()
+    delete_user = User.query.filter_by(id = user_id).first()
+
+    db.session.delete(delete_user)
+    db.session.commit()
+
+    return jsonify({"message": f"usuario {name_user.username} fue eliminado con exito"}), 201
+
+
+@app.route('/characters', methods=['GET'])
+def get_characters():
+    all_characters = Characters.query.all()
+
+    all_characters = list(map(lambda characters:characters.serialize(),all_characters))
+
+    return jsonify(all_characters), 200
+
+@app.route('/characters/<int:character_id>', methods=['GET'])
+def get_character(character_id):
+    character = Characters.query.filter_by(id = character_id).first()
+
+    return jsonify(character.serialize()), 200
+
+@app.route('/characters', methods=['POST'])
+def post_characters():
+    new_character = request.get_json()
+
+    new_character = Characters(name = new_character["name"],gender = new_character["gender"],eye_color = new_character["eye_color"],hair_color = new_character["hair_color"])
+
+    db.session.add(new_character)
+    db.session.commit()
+
+    return jsonify(new_character.serialize()), 201
+
+@app.route('/characters/<int:character_id>', methods=['DELETE'])
+def delete_character(character_id):
+    character_name = Characters.query.filter_by(id = character_id).first()
+    delete_character = Characters.query.filter_by(id = character_id).first()
+
+    db.session.delete(delete_character)
+    db.session.commit()
+
+    return jsonify({"message": f"character {character_name.name} fue eliminado con exito"}), 201
+
+
+@app.route('/planets', methods=['GET'])
+def get_planets():
+    all_planets = Planets.query.all()
+
+    all_planets = list(map(lambda all_planet:all_planet.serialize(),all_planets))
+
+    return jsonify(all_planets), 200
+
+@app.route('/planets/<int:planet_id>', methods=['GET'])
+def get_planet(planet_id):
+    planet = Planets.query.filter_by(id = planet_id).first()
+
+    return jsonify(planet.serialize()), 200
+
+@app.route('/planets', methods=['POST'])
+def post_planet():
+    new_planet = request.get_json()
+
+    new_planet = Planets(name = new_planet["name"],climate = new_planet["climate"],terrain = new_planet["terrain"],population = new_planet["population"])
+
+    db.session.add(new_planet)
+    db.session.commit()
+
+    return jsonify(new_planet.serialize()), 201
+
+@app.route('/planets/<int:planet_id>', methods=['DELETE'])
+def delete_planet(planet_id):
+    planet_name = Planets.query.filter_by(id = planet_id).first()
+    delete_planet = Planets.query.filter_by(id = planet_id).first()
+
+    db.session.delete(delete_planet)
+    db.session.commit()
+
+    return jsonify({"message": f"planeta {planet_name.name} fue eliminado con exito"}), 201
+
+@app.route('/users/<int:user_id>/favorites/characters/<int:character_id>', methods=['POST'])
+def add_favorite_character(user_id, character_id):
+    user = User.query.get(user_id)
+    character = Characters.query.get(character_id)    
+
+    user.favorite_characters.append(character)
+    db.session.commit()
+
+    return jsonify({"message": f"Character {character.name} added to favorites for user {user.username}"}), 200
+
+@app.route('/users/<int:user_id>/favorites/planets/<int:planet_id>', methods=['POST'])
+def add_favorite_planet(user_id, planet_id):
+    user = User.query.get(user_id)
+    planet = Planets.query.get(planet_id)
+
+    # Añadir el planeta a los favoritos del usuario
+    user.favorite_planets.append(planet)
+    db.session.commit()
+
+    return jsonify({"message": f"Planet {planet.name} added to favorites for user {user.username}"}), 200
+
+@app.route('/users/<int:user_id>/favorites/characters/<int:character_id>', methods=['DELETE'])
+def remove_favorite_character(user_id, character_id):
+    user = User.query.get(user_id)
+    character = Characters.query.get(character_id)    
+
+    user.favorite_characters.remove(character)
+    db.session.commit()
+
+    return jsonify({"message": f"Character {character.name} remove form favorites for user {user.username}"}), 200
+
+@app.route('/users/<int:user_id>/favorites/planets/<int:planet_id>', methods=['DELETE'])
+def remove_favorite_planet(user_id, planet_id):
+    user = User.query.get(user_id)
+    planet = Planets.query.get(planet_id)
+
+    # Añadir el planeta a los favoritos del usuario
+    user.favorite_planets.remove(planet)
+    db.session.commit()
+
+    return jsonify({"message": f"Planet {planet.name} removed from favorites for user {user.username}"}), 200
 
 # this only runs if `$ python src/app.py` is executed
 if __name__ == '__main__':
